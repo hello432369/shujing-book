@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>书境</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --t:#1d1d1f;--t2:#6e6e73;--t3:#86868b;
+  --b:#f5f5f7;--b2:#e8e8ed;--b3:#fff;
+  --ac:#0071e3;--del:#ff3b30;
+  --sbw:270px;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:15px;color:var(--t);background:var(--b);
+  -webkit-font-smoothing:antialiased
+}
+html,body,#app{height:100%;overflow:hidden}
+#app{display:flex}
+
+/* ── Sidebar (macOS 风格) ── */
+.sidebar{width:var(--sbw);min-width:var(--sbw);background:var(--b2);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid rgba(0,0,0,.05)}
+.sb-hd{padding:20px 16px 6px;flex-shrink:0}
+.sb-tt{font-size:22px;font-weight:700;color:var(--t);letter-spacing:-.5px}
+.sb-st{font-size:11px;color:var(--t3);margin-top:1px}
+.sb-sel{margin:10px 12px 4px;padding:8px 12px;border-radius:8px;background:var(--b3);cursor:pointer;font-size:12px;color:var(--t2);text-align:center;transition:.2s;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sb-sel:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.sb-sel.loaded{background:var(--b3);text-align:left;font-size:12px;color:var(--t);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sb-inp{margin:4px 12px 2px;padding:7px 10px;border-radius:8px;border:none;background:var(--b3);font-size:12px;color:var(--t);outline:none;flex-shrink:0;font-family:inherit;display:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sb-inp:focus{box-shadow:0 0 0 2px var(--ac)}
+.sb-info{padding:1px 14px 4px;font-size:11px;color:var(--t3);flex-shrink:0;display:none}
+.tree{flex:1;overflow-y:auto;padding:4px 0}
+.tree::-webkit-scrollbar{width:4px}
+.tree::-webkit-scrollbar-thumb{background:rgba(0,0,0,.06);border-radius:2px}
+.ti{user-select:none}
+.tr{display:flex;align-items:center;gap:2px;padding:3px 12px 3px 16px;cursor:pointer;font-size:12px;color:var(--t2);transition:.1s;border-radius:0}
+.tr:hover{background:rgba(0,0,0,.03)}
+.tr.act{background:rgba(0,113,227,.07);color:var(--ac);font-weight:500}
+.ti-cn{width:16px;text-align:center;flex-shrink:0;font-size:10px;opacity:.4}
+.ti-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ti-ct{font-size:10px;color:var(--t3);background:rgba(0,0,0,.03);padding:0 5px;border-radius:4px;flex-shrink:0}
+.ti-del{font-size:12px;cursor:pointer;padding:0 5px;border-radius:4px;color:var(--del);flex-shrink:0;margin-left:auto;opacity:0;transition:.12s}
+.tr:hover .ti-del{opacity:.4}
+.ti-del:hover{opacity:1!important;background:rgba(255,59,48,.08)!important}
+.ti-ch{display:none}
+.ti-ch.op{display:block}
+.ti-ch .tr{padding-left:32px!important}
+.ti-ch .ti-ch .tr{padding-left:48px!important}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--b3)}
+.mh{display:flex;align-items:center;padding:0 20px;height:44px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.05);flex-shrink:0;display:none}
+.mh-center{flex:1;font-size:13px;font-weight:500;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mh-right{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.cb{padding:4px 10px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;color:var(--ac);font-family:inherit;transition:.12s;white-space:nowrap}
+.cb:hover{background:rgba(0,113,227,.07)}
+.cb.act{background:rgba(0,113,227,.1);color:#0066cc;font-weight:500}
+.cw{flex:1;overflow-y:auto;background:#fff}
+.cw::-webkit-scrollbar{width:5px}
+.cw::-webkit-scrollbar-thumb{background:rgba(0,0,0,.05);border-radius:3px}
+.ct{padding:40px 48px 80px;max-width:720px;margin:0 auto;line-height:2;font-size:16px;color:var(--t);white-space:pre-wrap;word-break:break-word;font-family:"Noto Serif SC","Source Han Serif SC",STSong,SimSun,"Songti SC",Georgia,serif}
+.ct img{max-width:100%;border-radius:8px;margin:16px 0;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.ct pre{background:var(--b);border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
+.ct code{font-size:13px;background:var(--b);padding:2px 6px;border-radius:4px}
+.ct pre code{background:none;padding:0;font-size:13px;line-height:1.6}
+.ct h1,.ct h2,.ct h3,.ct h4{margin:20px 0 8px;font-weight:600;color:var(--t)}
+.ct h1{font-size:22px}.ct h2{font-size:19px}.ct h3{font-size:17px}.ct h4{font-size:15px}
+.ct li{margin:2px 0 2px 20px;list-style:disc}
+.ct a{color:var(--ac);text-decoration:none}.ct a:hover{text-decoration:underline}
+.ct br{content:'';display:block;margin:4px 0}
+.ct.v{writing-mode:vertical-rl;max-width:none;padding:32px 40px;height:100%;overflow-y:auto;line-height:1.8;font-size:17px}
+#editArea{width:100%;height:100%;border:none;outline:none;resize:none;padding:32px 40px;font-size:15px;font-family:"SF Mono","Fira Code","Cascadia Code",monospace;line-height:1.7;color:var(--t);background:#fff;tab-size:2}
+#editArea:focus{box-shadow:inset 0 0 0 1px var(--ac)}
+.wl{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px;user-select:none;padding:20px}
+.wi{font-size:38px;opacity:.25}
+.wt{font-size:18px;font-weight:600;color:var(--t2)}
+.ws{font-size:13px;text-align:center;max-width:360px;color:var(--t3);line-height:1.6}
+
+.ld{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px}
+.sp{width:16px;height:16px;border:2px solid var(--b);border-top-color:var(--ac);border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.er{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px}
+mark{background:rgba(0,113,227,.1);color:var(--t);border-radius:2px;padding:0 2px}
+@media(max-width:768px){.sidebar{width:220px;min-width:220px}.ct{padding:24px 20px 60px}}
+</style>
+</head>
+<body>
+<div id="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sb-hd">
+    <div class="sb-tt">书境</div>
+    <div class="sb-st">兔师兄 · 自动识别编码</div>
+  </div>
+  <div class="sb-sel" id="pickBtn" onclick="pickOrClear()" style="display:flex;align-items:center;gap:6px">📂 点击选择文件夹</div>
+  <div class="sb-info" id="infoLine"></div>
+  <input class="sb-inp" id="searchInput" placeholder="🔍 搜索..." oninput="filterTree()">
+  <div class="tree" id="treeWrap"></div>
+</aside>
+<main class="main">
+  <div class="mh" id="mainHeader">
+    <div class="mh-center" id="fileTitle"></div>
+    <div class="mh-right">
+      <button class="cb" id="vertBtn" onclick="toggleV()">竖排</button>
+      <button class="cb" onclick="fs(-1)">A−</button>
+      <button class="cb" onclick="fs(1)">A+</button>
+      <button class="cb del" id="delBtn" onclick="deleteCurrent()" style="color:#c0392b">🗑 删除</button>
+    </div>
+  </div>
+  <div class="cw" id="cw">
+    <div class="wl" id="welcome">
+      <div class="wi">📖</div>
+      <div class="wt">书境</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:6px">—— 兔师兄 ——</div>
+      <div class="ws">点击左侧「📂 点击选择文件夹」<br>选择你的书籍目录</div>
+      <div style="font-size:11px;color:var(--t3);line-height:2;margin-top:6px;text-align:center">
+        📄 文本 · 📝 Markdown · 📋 JSON · 📰 XML · 🌐 HTML<br>
+        🐍 Python · ⚡ JS/TS · ☕ Java · 🦀 Rust · 🔵 Go<br>
+        📜 Shell · 📐 YAML/TOML · 📊 CSV · 🗄️ SQL<br>
+        📑 LaTeX · 🖼️ SVG · 📕 PDF（内嵌阅读）
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+let rootDir=null, fileMap={}, allPaths=[], fsVal=16, vert=false;
+let curPath=null, curIdx=-1, lastEnc='utf-8';
+
+const TEXT_EXTS='.txt .md .json .xml .html .htm .css .js .ts .py .java .c .cpp .h .rs .go .rb .php .sh .bat .ps1 .yaml .yml .toml .ini .cfg .conf .log .csv .tsv .sql .tex .rst .org .nfo .svg'.split(' ');
+const PDF_EXT='.pdf';
+function isText(n){const i=n.lastIndexOf('.'),e=i>0?n.slice(i).toLowerCase():'';return i<=0||TEXT_EXTS.includes(e)||e===PDF_EXT}
+function fIcon(n){const i=n.lastIndexOf('.'),e=i>0?n.slice(i).toLowerCase():'';const o={txt:'📄',md:'📝',json:'📋',xml:'📰',html:'🌐',css:'🎨',js:'⚡',ts:'🔷',py:'🐍',java:'☕',c:'⚙',cpp:'⚙',rs:'🦀',go:'🔵',rb:'💎',sh:'📜',yaml:'📐',toml:'🔧',ini:'⚙',log:'📋',csv:'📊',sql:'🗄️',tex:'📑',svg:'🖼️',pdf:'📕'};return o[e]||'📄'}
+
+// ── IndexedDB ──
+function oDB(){return new Promise((o,f)=>{const r=indexedDB.open('Guji',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>o(r.result);r.onerror=()=>f(r.error)})}
+async function svH(h){const db=await oDB(),tx=db.transaction('h','readwrite');tx.objectStore('h').put(h,'r');return new Promise(o=>{tx.oncomplete=o})}
+async function ldH(){try{const db=await oDB(),tx=db.transaction('h','readonly'),r=tx.objectStore('h').get('r');return new Promise(o=>{r.onsuccess=()=>o(r.result);r.onerror=()=>o(null)})}catch{return null}}
+
+// ── 自动恢复 ──
+(async function(){const h=await ldH();if(!h)return;try{if((await h.queryPermission({mode:'read'}))==='granted'||(await h.requestPermission({mode:'read'}))==='granted'){rootDir=h;doLoad(h.name)}}catch{}})()
+
+async function doLoad(name){
+  document.getElementById('pickBtn').innerHTML='<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📂 '+name+'</span><span style="font-size:11px;color:#c0392b;margin-left:auto">✕</span>';
+  document.getElementById('pickBtn').classList.add('loaded');
+  document.getElementById('searchInput').style.display='block';document.getElementById('infoLine').style.display='block';
+  document.getElementById('infoLine').textContent='扫描中...';document.getElementById('welcome').innerHTML='<div class="ld"><div class="sp"></div><span>扫描中...</span></div>';
+  fileMap={};allPaths=[];curPath=null;curIdx=-1;
+  try{
+    await scan(rootDir,'');
+  }catch(e){
+    document.getElementById('infoLine').textContent='❌ 扫描出错: '+e.message;
+    document.getElementById('welcome').innerHTML='<div class="er"><div>❌</div><div style="font-size:13px">扫描失败: '+e.message+'</div></div>';
+    return;
+  }
+  if(allPaths.length===0){
+    document.getElementById('infoLine').textContent='该文件夹没有找到支持的文本文件';
+    document.getElementById('welcome').innerHTML='<div class="wl"><div class="wi">📂</div><div class="ws">该文件夹中没有找到文本文件<br>支持: txt/md/json/xml/html/css/js/py/java 等</div></div>';
+    return;
+  }
+  build();
+  document.getElementById('infoLine').textContent='共 '+allPaths.length+' 个文件 ✓';
+  document.getElementById('welcome').innerHTML='<div class="wi">📖</div><div class="wt">书境</div><div class="ws">已加载 <strong>'+allPaths.length+'</strong> 个文件<br>从左侧选择一本开始阅读</div>';
+}
+
+function clearDir(){
+  if(!confirm('清除当前文件夹，重新选择？'))return;
+  rootDir=null;fileMap={};allPaths=[];curPath=null;curIdx=-1;
+  document.getElementById('pickBtn').innerHTML='📂 点击选择文件夹';document.getElementById('pickBtn').classList.remove('loaded');
+  document.getElementById('searchInput').style.display='none';document.getElementById('searchInput').value='';
+  document.getElementById('infoLine').style.display='none';
+  document.getElementById('treeWrap').innerHTML='';
+  hideReader();
+  (async()=>{try{const db=await oDB(),tx=db.transaction('h','readwrite');tx.objectStore('h').delete('r')}catch{}})();
+}
+
+async function pickOrClear(){
+  if(rootDir){
+    if(confirm('切换文件夹？当前文件夹将被清除'))clearDir();
+    return;
+  }
+  await pickDir();
+}
+
+async function pickDir(){
+  if(!window.showDirectoryPicker){document.getElementById('pickBtn').textContent='⚠️ 请用 Chrome/Edge';return}
+  try{
+    rootDir=await window.showDirectoryPicker({mode:'read',id:'guji-browser'});
+    await svH(rootDir);doLoad(rootDir.name);
+  }catch(e){if(e.name!=='AbortError')document.getElementById('pickBtn').textContent='❌ 点击重试'}
+}
+
+async function scan(dir,pre){
+  const es=[];for await(const e of dir.values())es.push(e);
+  es.sort((a,b)=>a.name.localeCompare(b.name,'zh'));
+  for(const e of es){
+    if(e.name.startsWith('.'))continue;
+    const rp=pre?pre+'/'+e.name:e.name;
+    if(e.kind==='directory')await scan(e,rp);
+    else if(isText(e.name)){fileMap[rp]=e;allPaths.push(rp)}
+  }
+}
+
+function build(){
+  const t={};
+  for(const p of allPaths){const ps=p.split('/');let c=t;for(let i=0;i<ps.length;i++){if(i===ps.length-1){if(!c._f)c._f=[];c._f.push(p)}else{if(!c[ps[i]])c[ps[i]]={};c=c[ps[i]]}}}
+  document.getElementById('treeWrap').innerHTML='';rTree(t,document.getElementById('treeWrap'),'');
+}
+
+function rTree(n,con,pp){
+  const ds=Object.keys(n).filter(k=>k!=='_f').sort((a,b)=>a.localeCompare(b,'zh'));
+  for(const name of ds){
+    const fp=pp?pp+'/'+name:name,div=document.createElement('div');
+    div.className='ti';div.dataset.path=fp;
+    const row=document.createElement('div');row.className='tr';
+    row.innerHTML='<span class="ti-cn">📂</span><span class="ti-nm">'+esc(name)+'</span>';
+    const ch=n[name];let t=(ch._f||[]).length;
+    for(const k of Object.keys(ch))if(k!=='_f')t+=cnt(ch[k]);
+    if(t>0){const c=document.createElement('span');c.className='ti-ct';c.textContent=t+'个';row.appendChild(c)}
+    const del=document.createElement('span');del.className='ti-del';del.textContent='✕';del.title='删除此文件夹';
+    del.onclick=async(e)=>{e.stopPropagation();if(confirm('确认删除文件夹「'+name+'」及其中全部内容？'))await delDir(fp)};
+    row.appendChild(del);
+    row.onclick=()=>{const d=div.querySelector('.ti-ch');if(d)d.classList.toggle('op')};
+    div.appendChild(row);const cd=document.createElement('div');cd.className='ti-ch';
+    rTree(ch,cd,fp);div.appendChild(cd);con.appendChild(div);
+  }
+  if(n._f){for(const fp of n._f){
+    const nm=fp.split('/').pop(),div=document.createElement('div');
+    div.className='ti';div.dataset.path=fp;
+    const row=document.createElement('div');row.className='tr';
+    row.innerHTML='<span class="ti-cn">'+fIcon(nm)+'</span><span class="ti-nm">'+esc(nm)+'</span>';
+    const del=document.createElement('span');del.className='ti-del';del.textContent='✕';del.title='删除';
+    del.onclick=async(e)=>{e.stopPropagation();if(confirm('确认删除「'+nm+'」？'))await delFile(fp)};
+    row.appendChild(del);
+    row.onclick=()=>loadFile(fp);div.appendChild(row);con.appendChild(div);
+  }}
+}
+function cnt(n){let t=(n._f||[]).length;for(const k of Object.keys(n))if(k!=='_f')t+=cnt(n[k]);return t}
+
+// ── 删除 ──
+async function ensureRW(){
+  if(!rootDir)return false;
+  if((await rootDir.queryPermission({mode:'readwrite'}))==='granted')return true;
+  const r=await rootDir.requestPermission({mode:'readwrite'});
+  return r==='granted';
+}
+
+async function delFile(fp){
+  if(!await ensureRW()){alert('需要写权限才能删除');return}
+  const h=fileMap[fp];if(!h)return;
+  try{await h.remove();delete fileMap[fp];const i=allPaths.indexOf(fp);if(i>=0)allPaths.splice(i,1);build();if(curPath===fp){hideReader()}
+  document.getElementById('infoLine').textContent='已删除 · 剩余 '+allPaths.length+' 个文件'}catch(e){alert('删除失败: '+e.message)}
+}
+async function delDir(fp){
+  if(!await ensureRW()){alert('需要写权限才能删除');return}
+  const parts=fp.split('/');let dir=rootDir;
+  try{for(const p of parts)dir=await dir.getDirectoryHandle(p);await dir.remove({recursive:true})
+    document.getElementById('infoLine').textContent='重新扫描...';
+    fileMap={};allPaths=[];await scan(rootDir,'');build();
+    if(curPath&&curPath.startsWith(fp+'/')){hideReader()}
+    document.getElementById('infoLine').textContent='已删除 · 剩余 '+allPaths.length+' 个文件'
+  }catch(e){alert('删除失败: '+e.message)}
+}
+
+function hideReader(){document.getElementById('mainHeader').style.display='none';curPath=null;curIdx=-1;document.getElementById('cw').innerHTML='<div class="wl"><div class="wi">📖</div><div class="wt">书境</div><div class="ws">从左侧选择一本书开始阅读</div></div>'}
+
+// ── 删除当前文件 ──
+async function deleteCurrent(){if(!curPath)return;const nm=curPath.split('/').pop();if(!confirm('确认删除「'+nm+'」？'))return;await delFile(curPath);if(allPaths.length>0){const next=Math.min(curIdx,allPaths.length-1);loadFile(allPaths[next])}else hideReader()}
+
+// ── 导航 ──
+// ── 加载文件 ──
+async function loadFile(fp){
+  curPath=fp;curIdx=allPaths.indexOf(fp);
+  document.getElementById('mainHeader').style.display='';
+  const cw=document.getElementById('cw');cw.innerHTML='<div class="ld"><div class="sp"></div><span>加载中...</span></div>';
+  document.querySelectorAll('.tr.act').forEach(e=>e.classList.remove('act'));
+  document.querySelectorAll('.ti[data-path="'+escA(fp)+'"] .tr').forEach(e=>e.classList.add('act'));
+  const ps=fp.split('/');let a='';
+  for(let i=0;i<ps.length-1;i++){a=a?a+'/'+ps[i]:ps[i];const el=document.querySelector('.ti[data-path="'+escA(a)+'"]');if(el){const ch=el.querySelector('.ti-ch');if(ch)ch.classList.add('op')}}
+  try{
+    const h=fileMap[fp];if(!h)throw Error('文件不存在');
+    const f=await h.getFile();
+    const nm=fp.split('/').pop(),nm2=nm.replace(/\.[^.]+$/i,'');
+    const ext=nm.includes('.')?nm.slice(nm.lastIndexOf('.')).toLowerCase():'';
+
+    // PDF: 内嵌浏览器 PDF 阅读器
+    if(ext==='.pdf'){
+      const url=URL.createObjectURL(f);
+      document.getElementById('fileTitle').textContent=nm2+'  [pdf]';
+      vert=false;document.getElementById('vertBtn').classList.remove('act');
+      cw.innerHTML='';
+      const emb=document.createElement('embed');
+      emb.src=url;
+      emb.type='application/pdf';
+      emb.style.cssText='width:100%;height:100%;border:none;';
+      cw.appendChild(emb);
+      return;
+    }
+
+    // 文本文件：自动检测编码
+    const text=await readFile(f);
+    document.getElementById('fileTitle').textContent=nm2+'  ['+lastEnc+'] '+(window._encStat||'');
+    vert=false;document.getElementById('vertBtn').classList.remove('act');
+    const d=document.createElement('div');d.className='ct';d.id='ct';d.style.fontSize=fsVal+'px';
+    if(ext==='.md'){d.innerHTML=await renderMD(text,fp)}else{d.textContent=text}
+    // 保存原始文本（编辑用）
+    window._rawText=text;
+    // 添加编辑工具栏
+    const tb=document.createElement('div');
+    tb.style.cssText='display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:6px 20px;border-bottom:1px solid rgba(0,0,0,.04);flex-shrink:0;background:#fff';
+    const eb=document.createElement('button');
+    eb.textContent='✏️ 编辑';eb.id='editBtn';
+    eb.style.cssText='padding:4px 12px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;color:var(--ac);font-family:inherit;transition:.12s;white-space:nowrap';
+    eb.onmouseenter=()=>eb.style.background='rgba(0,113,227,.07)';
+    eb.onmouseleave=()=>eb.style.background='transparent';
+    eb.onclick=toggleEdit;
+    tb.appendChild(eb);
+    cw.innerHTML='';cw.appendChild(tb);cw.appendChild(d);
+  }catch(e){cw.innerHTML='<div class="er"><div>❌ 加载失败</div><div style="font-size:13px">'+e.message+'</div></div>'}
+}
+
+// ── Markdown 渲染（支持本地图片）──
+async function renderMD(text, fp){
+  const dir = fp.includes('/') ? fp.slice(0, fp.lastIndexOf('/')) : '';
+  const imgRE = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const imgs = []; let m;
+  while((m = imgRE.exec(text)) !== null) imgs.push({alt:m[1],src:m[2]});
+
+  // 解析所有本地图片为 blob URL
+  const imgMap = {};
+  for(const img of imgs){
+    if(img.src.startsWith('http://')||img.src.startsWith('https://')||img.src.startsWith('data:')) continue;
+    const relPath = dir ? dir+'/'+img.src : img.src;
+    const h = fileMap[relPath];
+    if(h){
+      try{
+        const file = await h.getFile();
+        imgMap[img.src] = URL.createObjectURL(file);
+      }catch{}
+    }
+  }
+
+  // 简单 MD → HTML 转换
+  let html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,(_,alt,src)=>{
+      const url = imgMap[src] || src;
+      return `<img src="${url}" alt="${esc(alt)}" style="max-width:100%;border-radius:6px;margin:12px 0">`;
+    })
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" style="color:var(--ac)">$1</a>')
+    .replace(/^###### (.*$)/gm,'<h6>$1</h6>')
+    .replace(/^##### (.*$)/gm,'<h5>$1</h5>')
+    .replace(/^#### (.*$)/gm,'<h4>$1</h4>')
+    .replace(/^### (.*$)/gm,'<h3>$1</h3>')
+    .replace(/^## (.*$)/gm,'<h2>$1</h2>')
+    .replace(/^# (.*$)/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^- (.*$)/gm,'<li>$1</li>')
+    .replace(/\n/g,'<br>');
+  return html;
+}
+
+// ── 编码检测 ──
+async function readFile(f){
+  const buf=await new Promise((o,fail)=>{const r=new FileReader();r.onload=()=>o(r.result);r.onerror=()=>fail(r.error);r.readAsArrayBuffer(f)});
+  const raw=new Uint8Array(buf);const len=Math.min(raw.length,50000);
+
+  // 1) UTF-16 BOM 检测
+  if(len>=2&&raw[0]===0xFF&&raw[1]===0xFE){lastEnc='utf-16le';return new TextDecoder('utf-16le').decode(buf)}
+  if(len>=2&&raw[0]===0xFE&&raw[1]===0xFF){lastEnc='utf-16be';return new TextDecoder('utf-16be').decode(buf)}
+
+  // 2) 字节级统计：GBK 双字节 vs UTF-8 三字节
+  let gbk=0,u8=0;
+  for(let i=0;i<len-1;i++){
+    const b=raw[i];if(b<0x80)continue;
+    if(b>=0xE0&&b<=0xEF&&i+2<len&&raw[i+1]>=0x80&&raw[i+1]<=0xBF&&raw[i+2]>=0x80&&raw[i+2]<=0xBF){u8++;i+=2;continue}
+    if(b>=0x81&&b<=0xFE){const b2=raw[i+1];if((b2>=0x40&&b2<=0x7E)||(b2>=0x80&&b2<=0xFE)){gbk++;i++;continue}}
+  }
+
+  // 3) 决策：GBK 序列显著多于 UTF-8 时用 GBK，否则 UTF-8
+  // 对于 GBK 古籍文件，gbk/u8 比例通常在 3~20 倍
+  // 对于 UTF-8 文件，u8 远大于 gbk
+  lastEnc=(gbk>u8*2&&gbk>5)?'gbk':'utf-8';
+  // 调试：记下统计值
+  window._encStat = 'u='+u8+' g='+gbk+' → '+lastEnc;
+  return new TextDecoder(lastEnc,{fatal:false}).decode(buf);
+}
+
+let editMode=false;
+
+function toggleEdit(){
+  const cw=document.getElementById('cw');
+  const btn=document.getElementById('editBtn');
+  if(!editMode){
+    // 进入编辑模式：用保存的原始文本，不用 textContent（避免丢失 Markdown 格式）
+    const txt=window._rawText||'';
+    const tb=document.createElement('div');
+    tb.style.cssText='display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:6px 20px;border-bottom:1px solid rgba(0,0,0,.04);flex-shrink:0;background:#fff';
+    const eb=document.createElement('button');
+    eb.textContent='💾 保存';eb.id='editBtn';
+    eb.style.cssText='padding:4px 12px;border-radius:6px;border:none;background:rgba(0,113,227,.1);cursor:pointer;font-size:12px;color:var(--ac);font-weight:500;font-family:inherit';
+    eb.onclick=toggleEdit;
+    tb.appendChild(eb);
+    const ta=document.createElement('textarea');
+    ta.id='editArea';ta.value=txt;
+    cw.innerHTML='';cw.appendChild(tb);cw.appendChild(ta);
+    editMode=true;ta.focus();ta.scrollTop=0;
+  }else{
+    saveFile();
+  }
+}
+
+async function saveFile(){
+  if(!curPath||!editMode)return;
+  const ta=document.getElementById('editArea');
+  if(!ta)return;
+  const content=ta.value;
+  const handle=fileMap[curPath];
+  if(!handle){alert('文件句柄丢失');return}
+  if(!await ensureRW()){alert('需要写权限才能保存');return}
+  try{
+    // 用 TextEncoder 显式编码为 UTF-8 再写入，保证一致性
+    const encoder=new TextEncoder();
+    const uint8=encoder.encode(content);
+    const writable=await handle.createWritable();
+    await writable.write(uint8);
+    await writable.close();
+    editMode=false;
+    window._rawText=content;
+    // 直接显示
+    const ext=curPath.includes('.')?curPath.slice(curPath.lastIndexOf('.')).toLowerCase():'';
+    const nm=curPath.split('/').pop().replace(/\.[^.]+$/i,'');
+    const cw=document.getElementById('cw');
+    const tb=document.createElement('div');
+    tb.style.cssText='display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:6px 20px;border-bottom:1px solid rgba(0,0,0,.04);flex-shrink:0;background:#fff';
+    const eb=document.createElement('button');
+    eb.textContent='✏️ 编辑';eb.id='editBtn';
+    eb.style.cssText='padding:4px 12px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;color:var(--ac);font-family:inherit;transition:.12s;white-space:nowrap';
+    eb.onmouseenter=()=>eb.style.background='rgba(0,113,227,.07)';
+    eb.onmouseleave=()=>eb.style.background='transparent';
+    eb.onclick=toggleEdit;
+    tb.appendChild(eb);
+    const d=document.createElement('div');d.className='ct';d.id='ct';d.style.fontSize=fsVal+'px';
+    if(ext==='.md'){d.innerHTML=await renderMD(content,curPath)}else{d.textContent=content}
+    cw.innerHTML='';cw.appendChild(tb);cw.appendChild(d);
+    document.getElementById('fileTitle').textContent=nm+'  已保存 ✓';
+    document.getElementById('infoLine').textContent='✅ 已保存';
+    setTimeout(()=>{document.getElementById('infoLine').textContent='共 '+allPaths.length+' 个文件 ✓'},2000);
+  }catch(e){alert('保存失败: '+e.message)}
+}
+
+function toggleV(){const e=document.getElementById('ct');if(!e)return;vert=!vert;e.classList.toggle('v',vert);document.getElementById('vertBtn').classList.toggle('act',vert)}
+function fs(d){fsVal=Math.max(12,Math.min(32,fsVal+d));const e=document.getElementById('ct');if(e)e.style.fontSize=fsVal+'px'}
+
+function filterTree(){
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+  document.querySelectorAll('.ti').forEach(e=>e.style.display='');document.querySelectorAll('.ti-ch').forEach(e=>e.classList.remove('op'));
+  if(!q)return;
+  document.querySelectorAll('.ti').forEach(item=>{const nm=item.querySelector('.ti-nm');if(!nm)return;if(nm.textContent.toLowerCase().includes(q)){nm.innerHTML=hl(nm.textContent,q);let p=item.parentElement;while(p){if(p.classList.contains('ti-ch'))p.classList.add('op');p=p.parentElement}}else item.style.display='none'})
+}
+function hl(t,q){const i=t.toLowerCase().indexOf(q);return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length))}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function escA(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}
+</script>
+</body>
+</html>
